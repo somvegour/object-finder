@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: rgb(60, 60, 90); 
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            animation: glow 2s infinite alternate;
+        }
+
+       
+
+        .game-area {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .objects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .objects-grid {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            }
+        }
+
+        .object {
+            background-color: #3498db;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 120px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .object {
+                height: 100px;
+                padding: 10px;
+            }
+        }
+
+        .object:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .object img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .object img {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
+        .object-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .object-name {
+                font-size: 0.8rem;
+            }
+        }
+
+        .key {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            bottom: -40px;
+            transition: all 0.5s ease;
+        }
+
+        .key-found {
+            bottom: 10px;
+            animation: bounce 0.5s;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .hint {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-style: italic;
+            border-left: 5px solid #f39c12;
+        }
+
+        .timer, .attempts {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .timer {
+            color: #f39c12;
+        }
+
+        .attempts {
+            color: #e74c3c;
+        }
+
+        .player-screen {
+            display: none;
+            text-align: center;
+        }
+
+        button {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .result {
+            font-size: 1.5rem;
+            margin: 20px 0;
+            font-weight: bold;
+            animation: fadeIn 1s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .success {
+            color: #2ecc71;
+        }
+
+        .failure {
+            color: #e74c3c;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .object.selected {
+            background-color: #f39c12;
+            animation: pulse 0.5s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            border-radius: 50%;
+            animation: confetti-fall 5s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .restart-btn {
+            background-color: #3498db;
+            display: none;
+        }
+
+        .restart-btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hide and seek the Key </h1>
+        
+        <div id="welcome-screen" class="player-screen">
+       
+
+            <button id="hider-btn">I'll Hide the Key</button>
+            <button id="seeker-btn">I'll Find the Key</button>
+        </div>
+        
+        <div id="hider-screen" class="player-screen">
+            <h2>Hide the Key</h2>
+            <p>Click on an object to hide the key behind it. Then create a hint (a riddle) to help the seeker find it.</p>
+            <div class="objects-grid" id="hider-grid"></div>
+            <div id="hint-input" class="hidden">
+                <textarea id="hint-text" placeholder="Create a riddle hint for the seeker..." rows="3" style="width: 80%; padding: 10px; border-radius: 5px; margin: 10px 0;"></textarea>
+                <button id="submit-hint">Submit Hint</button>
+            </div>
+        </div>
+        
+        <div id="seeker-screen" class="player-screen">
+            <h2>Find the Key</h2>
+            <div class="hint" id="hint-display"></div>
+            <div class="timer">Time left: <span id="time">01:00</span></div>
+            <div class="attempts">Attempts left: <span id="attempts">5</span></div>
+            <div class="objects-grid" id="seeker-grid"></div>
+            <div class="result" id="result"></div>
+            <button class="restart-btn" id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game data - now with 20 objects
+        const objects = [
+            { name: "Tree", emoji: "🌳", hintWords: ["green", "plant", "forest", "wood"] },
+            { name: "Book", emoji: "📚", hintWords: ["read", "pages", "library", "knowledge"] },
+            { name: "Clock", emoji: "🕒", hintWords: ["time", "tick", "hour", "watch"] },
+            { name: "Apple", emoji: "🍎", hintWords: ["fruit", "red", "eat", "healthy"] },
+            { name: "Car", emoji: "🚗", hintWords: ["drive", "vehicle", "road", "speed"] },
+            { name: "House", emoji: "🏠", hintWords: ["home", "live", "roof", "family"] },
+            { name: "Sun", emoji: "☀️", hintWords: ["light", "day", "hot", "star"] },
+            { name: "Moon", emoji: "🌙", hintWords: ["night", "light", "sky", "phase"] },
+            { name: "Cat", emoji: "🐱", hintWords: ["pet", "meow", "furry", "animal"] },
+            { name: "Dog", emoji: "🐶", hintWords: ["bark", "pet", "loyal", "puppy"] },
+            { name: "Pizza", emoji: "🍕", hintWords: ["food", "cheese", "slice", "italian"] },
+            { name: "Money", emoji: "💰", hintWords: ["cash", "rich", "wealth", "dollar"] },
+            { name: "Ball", emoji: "⚽", hintWords: ["play", "round", "sport", "game"] },
+            { name: "Phone", emoji: "📱", hintWords: ["call", "smart", "app", "text"] },
+            { name: "Bike", emoji: "🚲", hintWords: ["ride", "cycle", "pedal", "transport"] },
+            { name: "Camera", emoji: "📷", hintWords: ["photo", "picture", "lens", "memory"] },
+            { name: "Gift", emoji: "🎁", hintWords: ["present", "box", "surprise", "birthday"] },
+            { name: "Music", emoji: "🎵", hintWords: ["sound", "song", "note", "melody"] },
+            { name: "Rain", emoji: "🌧️", hintWords: ["water", "weather", "umbrella", "storm"] },
+            { name: "Star", emoji: "⭐", hintWords: ["sky", "night", "twinkle", "wish"] },
+            { name: "Sun glass", emoji: "👓", hintWords: ["cool", "nose"," ear"] },
+            { name: "Cap", emoji: "🎩", hintWords: ["magic", "head" ] },
+            { name: "Goal", emoji: "🥅", hintWords: ["kick", "ball"] },
+            { name: "Plan", emoji: "✈", hintWords: ["sky", "fly"] },
+            { name: "hehe", emoji: "😛", hintWords: ["bewakoof","hehehe"] },
+        ];
+
+        // Game state
+        let gameState = {
+            keyLocation: null,
+            hint: "",
+            attemptsLeft: 5,
+            timeLeft: 60,
+            timer: null,
+            isSeekerTurn: false
+        };
+
+        // DOM elements
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const hiderScreen = document.getElementById('hider-screen');
+        const seekerScreen = document.getElementById('seeker-screen');
+        const hiderGrid = document.getElementById('hider-grid');
+        const seekerGrid = document.getElementById('seeker-grid');
+        const hintDisplay = document.getElementById('hint-display');
+        const timeDisplay = document.getElementById('time');
+        const attemptsDisplay = document.getElementById('attempts');
+        const resultDisplay = document.getElementById('result');
+        const hintInput = document.getElementById('hint-input');
+        const hintText = document.getElementById('hint-text');
+        const restartBtn = document.getElementById('restart-btn');
+        
+        // Initialize the game
+        function initGame() {
+            welcomeScreen.style.display = 'block';
+            hiderScreen.style.display = 'none';
+            seekerScreen.style.display = 'none';
+            restartBtn.style.display = 'none';
+            
+            // Shuffle objects array
+            shuffleArray(objects);
+            
+            // Create hider grid with 15 objects (for more variety)
+            hiderGrid.innerHTML = '';
+            objects.slice(0, 25).forEach((obj, index) => {
+                const objectElement = createObjectElement(obj, index, true);
+                hiderGrid.appendChild(objectElement);
+            });
+            
+            // Create seeker grid (will be populated when game starts)
+            seekerGrid.innerHTML = '';
+            
+            // Reset game state
+            gameState = {
+                keyLocation: null,
+                hint: "",
+                attemptsLeft: 5,
+                timeLeft: 60,
+                timer: null,
+                isSeekerTurn: false
+            };
+            
+            // Event listeners
+            document.getElementById('hider-btn').addEventListener('click', showHiderScreen);
+            document.getElementById('seeker-btn').addEventListener('click', showSeekerScreen);
+            document.getElementById('submit-hint').addEventListener('click', submitHint);
+            restartBtn.addEventListener('click', initGame);
+        }
+        
+        // Show hider screen
+        function showHiderScreen() {
+            welcomeScreen.style.display = 'none';
+            hiderScreen.style.display = 'block';
+            seekerScreen.style.display = 'none';
+        }
+        
+        // Show seeker screen (for testing, normally this would be on another device)
+        function showSeekerScreen() {
+            welcomeScreen.style.display = 'none';
+            hiderScreen.style.display = 'none';
+            seekerScreen.style.display = 'block';
+            
+            // For demo purposes, we'll simulate that the hider has already hidden the key
+            simulateHiderAction();
+        }
+        
+        // Create an object element for the grid
+        function createObjectElement(obj, index, isHider) {
+            const objectElement = document.createElement('div');
+            objectElement.className = 'object';
+            objectElement.dataset.index = index;
+            
+            const emoji = document.createElement('div');
+            emoji.className = 'object-emoji';
+            emoji.textContent = obj.emoji;
+            
+            const name = document.createElement('div');
+            name.className = 'object-name';
+            name.textContent = obj.name;
+            
+            objectElement.appendChild(emoji);
+            objectElement.appendChild(name);
+            
+            if (isHider) {
+                objectElement.addEventListener('click', () => selectObjectToHide(objectElement, index));
+            } else {
+                objectElement.addEventListener('click', () => checkForKey(objectElement, index));
+            }
+            
+            return objectElement;
+        }
+        
+        // Select an object to hide the key behind
+        function selectObjectToHide(element, index) {
+            // Reset any previously selected object
+            document.querySelectorAll('.object.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            gameState.keyLocation = index;
+            
+            // Show hint input
+            hintInput.classList.remove('hidden');
+            
+            // Scroll to hint input
+            hintInput.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Submit the hint
+        function submitHint() {
+            const hint = hintText.value.trim();
+            if (hint === '') {
+                alert('Please enter a hint!');
+                return;
+            }
+            
+            gameState.hint = hint;
+            
+            // For a real multiplayer game, you would send this data to the server
+            // and the seeker screen would be on another device
+            
+            // For this demo, we'll just show a message
+            alert('Key hidden and hint submitted! Now pass the device to the seeker.');
+            
+            // Reset for seeker
+            prepareSeekerScreen();
+        }
+        
+        // Prepare the seeker screen
+        function prepareSeekerScreen() {
+            hiderScreen.style.display = 'none';
+            seekerScreen.style.display = 'block';
+            restartBtn.style.display = 'none';
+            
+            // Display the hint
+            hintDisplay.textContent = gameState.hint;
+            
+            // Create seeker grid with the same objects
+            seekerGrid.innerHTML = '';
+            objects.slice(0, 25).forEach((obj, index) => {
+                const objectElement = createObjectElement(obj, index, false);
+                seekerGrid.appendChild(objectElement);
+            });
+            
+            // Start the timer
+            gameState.attemptsLeft = 5;
+            gameState.timeLeft = 60;
+            updateDisplays();
+            
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                updateDisplays();
+                
+                if (gameState.timeLeft <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+        
+        // Check if the selected object has the key
+        function checkForKey(element, index) {
+            if (gameState.attemptsLeft <= 0) return;
+            
+            gameState.attemptsLeft--;
+            updateDisplays();
+            
+            element.classList.add('selected');
+            
+            if (index === gameState.keyLocation) {
+                // Found the key!
+                const key = document.createElement('div');
+                key.className = 'key key-found';
+                key.textContent = '🔑';
+                element.appendChild(key);
+                
+                endGame(true);
+            } else {
+                // Wrong guess
+                setTimeout(() => {
+                    element.classList.remove('selected');
+                }, 500);
+                
+                if (gameState.attemptsLeft <= 0) {
+                    endGame(false);
+                }
+            }
+        }
+        
+        // Update timer and attempts displays
+        function updateDisplays() {
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            attemptsDisplay.textContent = gameState.attemptsLeft;
+        }
+        
+        // End the game
+        function endGame(success) {
+            clearInterval(gameState.timer);
+            
+            if (success) {
+                resultDisplay.textContent = 'Congratulations! You found the key!';
+                resultDisplay.className = 'result success';
+                createConfetti();
+            } else {
+                resultDisplay.textContent = 'Game Over! You ran out of time/attempts.';
+                resultDisplay.className = 'result failure';
+                
+                // Reveal the key location
+                const keyObjects = document.querySelectorAll('.object');
+                const keyElement = keyObjects[gameState.keyLocation];
+                
+                const key = document.createElement('div');
+                key.className = 'key key-found';
+                key.textContent = '🔑';
+                keyElement.appendChild(key);
+            }
+            
+            // Show restart button
+            restartBtn.style.display = 'inline-block';
+            restartBtn.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Create confetti animation
+        function createConfetti() {
+            const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722'];
+            
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = Math.random() * 10 + 5 + 'px';
+                confetti.style.height = Math.random() * 10 + 5 + 'px';
+                confetti.style.animationDuration = Math.random() * 3 + 2 + 's';
+                document.body.appendChild(confetti);
+                
+                // Remove confetti after animation
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
+        
+        // Shuffle array function
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // For demo purposes - simulate hider action
+        function simulateHiderAction() {
+            // Randomly select an object to hide the key
+            gameState.keyLocation = Math.floor(Math.random() * 25);
+            
+            // Create a hint based on the object's hint words
+            const hiddenObject = objects[gameState.keyLocation];
+            const hintWord = hiddenObject.hintWords[Math.floor(Math.random() * hiddenObject.hintWords.length)];
+            gameState.hint = `I'm thinking of something that relates to: ${hintWord}`;
+            
+            // Prepare seeker screen
+            prepareSeekerScreen();
+        }
+        
+        // Initialize the game when the page loads
+        window.onload = initGame;
+
+        // Make the game responsive to window resize
+        window.addEventListener('resize', function() {
+            // The CSS grid and responsive styles will handle most of it
+            // We just need to make sure the container stays properly sized
+            const container = document.querySelector('.container');
+            container.style.width = '95%';
+            if (window.innerWidth > 1200) {
+                container.style.maxWidth = '1200px';
+            }
+        });
+    </script>
+</body>
+</html>

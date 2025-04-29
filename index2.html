@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expert Object Finder</title>
+    <style>
+        :root {
+            --primary: #6a11cb;
+            --secondary: #2575fc;
+            --dark: #1a1a2e;
+            --light: #f8f9fa;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(45deg, var(--dark), #16213e);
+            color: var(--light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 95%;
+            max-width: 800px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #ff8a00, #da1b60);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .game-area {
+            position: relative;
+            height: 500px;
+            margin: 1rem 0;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .object {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .object.real {
+            z-index: 2;
+        }
+        
+        .object.decoy {
+            opacity: 0.7;
+            z-index: 1;
+        }
+        
+        .object.found {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+        
+        .object-emoji {
+            font-size: 2rem;
+            transition: all 0.3s;
+        }
+        
+        .object-name {
+            margin-top: 5px;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 8px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .object:hover .object-name {
+            opacity: 1;
+        }
+        
+        .object:hover .object-emoji {
+            transform: scale(1.2);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 1rem 0;
+        }
+        
+        .clue-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            border-left: 4px solid var(--warning);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(to right, #ff8a00, #da1b60);
+        }
+        
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .mode-btn {
+            padding: 8px 20px;
+            margin: 0 5px;
+        }
+        
+        .setup-panel {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .setup-panel.active {
+            display: block;
+        }
+        
+        .object-selector {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 1rem 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .object-option {
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+        
+        .object-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .object-option.selected {
+            background: var(--success);
+        }
+        
+        .clue-input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .clue-list {
+            margin-top: 10px;
+        }
+        
+        .clue-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @media (max-width: 600px) {
+            .game-area {
+                height: 400px;
+            }
+            
+            .object-emoji {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Mode Selection Screen -->
+        <div id="modeScreen">
+            <h1>Expert Object Finder</h1>
+            <p>Select a mode to begin</p>
+            <div class="mode-selector">
+                <button class="btn mode-btn" id="singlePlayerBtn">Single Player</button>
+                <button class="btn mode-btn btn-secondary" id="twoPlayerBtn">Two Player</button>
+            </div>
+        </div>
+    
+        <!-- Main Game Screen (Initially Hidden) -->
+        <div id="gameScreen" style="display: none;">
+            <p>Solve the challenging clues to find hidden objects!</p>
+    
+            <div class="setup-panel" id="twoPlayerSetup">
+                <h3>Player 1: Setup the Challenge</h3>
+                <p>Select 5 objects and write clues for each:</p>
+    
+                <div class="object-selector" id="objectSelector">
+                    <!-- Object options will be added here -->
+                </div>
+    
+                <div id="clueSetupArea">
+                    <!-- Clue input for selected objects will appear here -->
+                </div>
+    
+                <button class="btn" id="startGameBtn">Start Game</button>
+            </div>
+    
+            <div class="stats">
+                <div>🔍 Found: <span id="found">0</span>/<span id="total">5</span></div>
+                <div>⏱️ Time: <span id="time">60</span>s</div>
+            </div>
+    
+            <div class="clue-box">
+                <p id="clue">Click any object to start </p>
+            </div>
+    
+            <div class="game-area" id="gameArea">
+                <!-- Objects will be placed here -->
+            </div>
+    
+            <button class="btn" id="restartBtn">New Game</button>
+    
+            <div id="endScreen" style="display: none; text-align: center; margin-top: 1rem;">
+                <h2 id="endMessage">🎉 You Win!</h2>
+                <button class="btn" id="playAgainSingle">Play Again (Single Player)</button>
+                <button class="btn btn-secondary" id="playAgainTwo">Play Again (Two Player)</button>
+            </div>
+        </div>
+    </div>
+    
+    
+    <script>
+        // Game database with 50 objects
+        const objectDatabase = [
+            { emoji: "🔑", name: "Golden Key" },
+            { emoji: "💎", name: "Diamond" },
+            { emoji: "🔮", name: "Crystal Ball" },
+            { emoji: "👑", name: "Crown" },
+            { emoji: "🗝️", name: "Old Key" },
+            { emoji: "⚔️", name: "Sword" },
+            { emoji: "🏆", name: "Trophy" },
+            { emoji: "📜", name: "Scroll" },
+            { emoji: "💍", name: "Ring" },
+            { emoji: "🕰️", name: "Pocket Watch" },
+            { emoji: "🎻", name: "Violin" },
+            { emoji: "🪄", name: "Magic Wand" },
+            { emoji: "🧿", name: "Evil Eye" },
+            { emoji: "⚱️", name: "Urn" },
+            { emoji: "🪶", name: "Feather Quill" },
+            { emoji: "🧭", name: "Compass" },
+            { emoji: "⚗️", name: "Alembic" },
+            { emoji: "🔭", name: "Telescope" },
+            { emoji: "🪙", name: "Ancient Coin" },
+            { emoji: "📿", name: "Prayer Beads" },
+            { emoji: "🪔", name: "Diya" },
+            { emoji: "🪕", name: "Banjo" },
+            { emoji: "🎷", name: "Saxophone" },
+            { emoji: "🪘", name: "Drum" },
+            { emoji: "🎻", name: "Cello" },
+            { emoji: "🪗", name: "Accordion" },
+            { emoji: "🎺", name: "Trumpet" },
+            { emoji: "🪞", name: "Hand Mirror" },
+            { emoji: "🕯️", name: "Candle" },
+            { emoji: "🪑", name: "Antique Chair" },
+            { emoji: "🖼️", name: "Portrait" },
+            { emoji: "🧳", name: "Travel Trunk" },
+            { emoji: "🪆", name: "Matryoshka" },
+            { emoji: "🎎", name: "Doll" },
+            { emoji: "🪀", name: "Yo-Yo" },
+            { emoji: "🎣", name: "Fishing Rod" },
+            { emoji: "🪁", name: "Kite" },
+            { emoji: "🧵", name: "Spool" },
+            { emoji: "🪡", name: "Needle" },
+            { emoji: "🧶", name: "Yarn" },
+            { emoji: "🪢", name: "Knot" },
+            { emoji: "🧴", name: "Perfume" },
+            { emoji: "🪒", name: "Razor" },
+            { emoji: "🧷", name: "Safety Pin" },
+            { emoji: "🪞", name: "Compact Mirror" },
+            { emoji: "🧹", name: "Broom" },
+            { emoji: "🪣", name: "Bucket" },
+            { emoji: "🪤", name: "Mouse Trap" },
+            { emoji: "🧮", name: "Abacus" },
+            { emoji: "📯", name: "Post Horn" },
+            { emoji: "🪕", name: "Lute" }
+        ];
+
+        const decoyDatabase = [
+            "📘", "✏️", "🪑", "🕯️", "🧦", "🥄", "🧩", "🎲", "📱", "💡",
+            "🔦", "🧸", "🎩", "🧦", "🥿", "🪣", "🧹", "🪞", "🖼️", "🪑",
+            "🛏️", "🧷", "📎", "✂️", "📍", "📌", "🧮", "📿", "🪕", "🎸",
+            "🍎", "🍌", "🍪", "🍵", "☕", "🍷", "🍾", "🍶", "🧃", "🥤",
+            "🍴", "🥢", "🔪", "🍽️", "🧊", "🧂", "🍯", "🥄", "🧉", "🍼"
+        ];
+
+        // Game state
+        let gameState = {
+            targetObjects: [],
+            decoys: [],
+            foundCount: 0,
+            timeLeft: 60,
+            timer: null,
+            currentClueIndex: 0,
+            gameMode: null, // 'single' or 'two'
+            selectedObjects: []
+        };
+
+        // DOM elements
+        const gameArea = document.getElementById('gameArea');
+        const foundElement = document.getElementById('found');
+        const totalElement = document.getElementById('total');
+        const timeElement = document.getElementById('time');
+        const clueElement = document.getElementById('clue');
+        const restartBtn = document.getElementById('restartBtn');
+        const singlePlayerBtn = document.getElementById('singlePlayerBtn');
+        const twoPlayerBtn = document.getElementById('twoPlayerBtn');
+        const twoPlayerSetup = document.getElementById('twoPlayerSetup');
+        const objectSelector = document.getElementById('objectSelector');
+        const clueSetupArea = document.getElementById('clueSetupArea');
+        const startGameBtn = document.getElementById('startGameBtn');
+
+        function initGame() {
+    // Reset game state
+    gameState = {
+        targetObjects: [],
+        decoys: [],
+        foundCount: 0,
+        timeLeft: 60,
+        timer: null,
+        currentClueIndex: 0,
+        gameMode: gameState.gameMode,
+        selectedObjects: []
+    };
+
+    // Clear game area
+    gameArea.innerHTML = '';
+
+    if (gameState.gameMode === 'single') {
+        // Single player mode - use predefined object pool
+        initSinglePlayerGame();
+        return; // ✅ yaha se return karo taaki neeche ka code na chale
+    } else if (gameState.gameMode === 'two') {
+        // Two player mode
+        clueElement.textContent = "Player 1 is setting up the challenge...";
+        initTwoPlayerSetup();
+        return;
+    }
+
+    // Ye part sirf fallback ke liye hai (kabhi mode galat ho toh)
+    gameState.targetObjects = [...objectDatabase]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 5);
+
+    placeObjects(gameState.targetObjects, 'real');
+
+    const selectedDecoys = [...decoyDatabase]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 25);
+
+    placeObjects(selectedDecoys, 'decoy');
+
+    totalElement.textContent = gameState.targetObjects.length;
+    foundElement.textContent = '0';
+    timeElement.textContent = gameState.timeLeft;
+    timeElement.style.color = '';
+    timeElement.style.animation = '';
+
+    updateClue();
+    startTimer();
+}
+
+        function initSinglePlayerGame() {
+            // Select 5 random target objects with predefined difficult clues
+            gameState.targetObjects = [
+            { 
+                emoji: "🔑", 
+                name: "Golden Key", 
+                clues: [
+                    "I turn but don't rotate", 
+                    "Essential for entry yet not a password",
+                    "What has teeth but can't bite?"
+                ] 
+            },
+            { 
+                emoji: "💎", 
+                name: "Diamond", 
+                clues: [
+                    "Formed under pressure, prized under light",
+                    "April's gift that's forever",
+                    "Harder than steel yet more fragile"
+                ] 
+            },
+            { 
+                emoji: "🔮", 
+                name: "Crystal Ball", 
+                clues: [
+                    "I show what's hidden but cloud my own surface",
+                    "Seers' sphere of obscured truths",
+                    "Glass orb that reveals by obscuring"
+                ] 
+            },
+            { 
+                emoji: "👑", 
+                name: "Crown", 
+                clues: [
+                    "Heavy lies the head that wears me",
+                    "Jeweled circle of authority",
+                    "Royal burden made precious"
+                ] 
+            },
+            { 
+                emoji: "🗝️", 
+                name: "Old Key", 
+                clues: [
+                    "My teeth unlock forgotten passages",
+                    "Rusty but still holds power",
+                    "Ancient opener of sealed histories"
+                ] 
+            },
+            { 
+                emoji: "⚔️", 
+                name: "Sword", 
+                clues: [
+                    "Double-edged symbol of power",
+                    "Knight's tooth of steel",
+                    "Sharp tongue that speaks violently"
+                ] 
+            },
+            { 
+                emoji: "🏆", 
+                name: "Trophy", 
+                clues: [
+                    "Empty vessel of past glories",
+                    "Hard-won hollow victory",
+                    "Proof of achievement that gathers dust"
+                ] 
+            },
+            { 
+                emoji: "📜", 
+                name: "Scroll", 
+                clues: [
+                    "Rolled up history waiting to unfold",
+                    "Ancient secrets in cylindrical form",
+                    "Parchment snake that holds wisdom"
+                ] 
+            },
+            { 
+                emoji: "💍", 
+                name: "Ring", 
+                clues: [
+                    "Circular promise on fourth finger",
+                    "Endless loop of commitment",
+                    "Precious circle with no exit"
+                ] 
+            },
+            { 
+                emoji: "🕰️", 
+                name: "Pocket Watch", 
+                clues: [
+                    "Mechanical heartbeat in your palm",
+                    "Ticking prison for fleeting moments",
+                    "Gilded cage for relentless time"
+                ] 
+            },
+            { 
+                emoji: "🎻", 
+                name: "Violin", 
+                clues: [
+                    "Wooden box that sings when stroked",
+                    "Four-stringed voice of the orchestra",
+                    "Fiddle that weeps melodies"
+                ] 
+            },
+            { 
+                emoji: "🪄", 
+                name: "Magic Wand", 
+                clues: [
+                    "Wooden conductor of impossible feats",
+                    "Pointed focus of arcane energy",
+                    "Twig that bends reality"
+                ] 
+            },
+            { 
+                emoji: "🧿", 
+                name: "Evil Eye", 
+                clues: [
+                    "Azure gaze that wards off malice",
+                    "Protective circular stare",
+                    "Unblinking guardian against curses"
+                ] 
+            },
+            { 
+                emoji: "⚱️", 
+                name: "Urn", 
+                clues: [
+                    "Vessel for what remains after fire",
+                    "Ceramic keeper of final memories",
+                    "Ashen contents in ornate prison"
+                ] 
+            },
+            { 
+                emoji: "🪶", 
+                name: "Quill", 
+                name: "Feather Quill", 
+                clues: [
+                    "Plume that spills ink like blood",
+                    "Bird's wing turned scribe's tool",
+                    "Sharpened feather that writes history"
+                ] 
+            },
+            { 
+                emoji: "🧭", 
+                name: "Compass", 
+                clues: [
+                    "Needle that always knows its way home",
+                    "Magnetic finger pointing north",
+                    "Guide that knows where you are not"
+                ] 
+            },
+            { 
+                emoji: "⚗️", 
+                name: "Alembic", 
+                clues: [
+                    "Glass vessel of transformation",
+                    "Alchemist's tool for liquid dreams",
+                    "Distiller of essences and truths"
+                ] 
+            },
+            { 
+                emoji: "🔭", 
+                name: "Telescope", 
+                clues: [
+                    "Cylinder that brings distant worlds near",
+                    "Eye stretched toward the cosmos",
+                    "Time machine showing ancient light"
+                ] 
+            },
+            { 
+                emoji: "🪙", 
+                name: "Ancient Coin", 
+                clues: [
+                    "Metal disc of forgotten commerce",
+                    "Stamped face of a dead empire",
+                    "Circular relic of bygone trade"
+                ] 
+            },
+            { 
+                emoji: "📿", 
+                name: "Prayer Beads", 
+                clues: [
+                    "Knotted string of whispered devotions",
+                    "Tactile counter of spiritual longing",
+                    "Circular ladder to the divine"
+                ] 
+            },
+            { 
+                emoji: "🪔", 
+                name: "Diya", 
+                clues: [
+                    "Earthen cup holding captive flame",
+                    "Clay vessel of sacred light",
+                    "Temporary sun against darkness"
+                ] 
+            },
+            { 
+                emoji: "🪕", 
+                name: "Banjo", 
+                clues: [
+                    "Circular drum with a singing neck",
+                    "Twangy voice of the mountains",
+                    "Happy instrument with a dark past"
+                ] 
+            },
+            { 
+                emoji: "🎷", 
+                name: "Saxophone", 
+                clues: [
+                    "Brass snake that sings the blues",
+                    "Shining curve of jazz breath",
+                    "Golden voice of smoky rooms"
+                ] 
+            },
+            { 
+                emoji: "🪘", 
+                name: "Drum", 
+                clues: [
+                    "Stretched skin that speaks when struck",
+                    "Hollow body with a beating heart",
+                    "Wooden circle that remembers rhythm"
+                ] 
+            },
+            { 
+                emoji: "🎻", 
+                name: "Cello", 
+                clues: [
+                    "Large wooden voice between the legs",
+                    "Deepest singer of the string family",
+                    "Elegant box that moans when bowed"
+                ] 
+            },
+            { 
+                emoji: "🪗", 
+                name: "Accordion", 
+                clues: [
+                    "Breathing box of many voices",
+                    "Portable orchestra in pleated arms",
+                    "Squeezed melody maker"
+                ] 
+            },
+            { 
+                emoji: "🎺", 
+                name: "Trumpet", 
+                clues: [
+                    "Shining brass herald",
+                    "Coiled metal that shouts in brass",
+                    "Valved voice of jazz and royalty"
+                ] 
+            },
+            { 
+                emoji: "🪞", 
+                name: "Hand Mirror", 
+                clues: [
+                    "Silvered glass that steals your face",
+                    "Reflective circle showing truth and lies",
+                    "Vanity's portable pool"
+                ] 
+            },
+            { 
+                emoji: "🕯️", 
+                name: "Candle", 
+                clues: [
+                    "Towering wax sentinel",
+                    "Melting pillar of captured light",
+                    "Suicidal bringer of illumination"
+                ] 
+            },
+            { 
+                emoji: "🪑", 
+                name: "Antique Chair", 
+                clues: [
+                    "Wooden embrace for tired royalty",
+                    "Carved throne of domestic rule",
+                    "Silent witness to generations"
+                ] 
+            },
+            { 
+                emoji: "🖼️", 
+                name: "Portrait", 
+                clues: [
+                    "Captured face in gilded cage",
+                    "Oil and canvas memory",
+                    "Frozen gaze behind glass"
+                ] 
+            },
+            { 
+                emoji: "🧳", 
+                name: "Travel Trunk", 
+                clues: [
+                    "Leather-bound world traveler",
+                    "Wooden belly full of journeys",
+                    "Sturdy keeper of wanderlust"
+                ] 
+            },
+            { 
+                emoji: "🪆", 
+                name: "Matryoshka", 
+                clues: [
+                    "Wooden womb with many daughters",
+                    "Nesting secrets in painted smiles",
+                    "Infinite regression in doll form"
+                ] 
+            },
+            { 
+                emoji: "🎎", 
+                name: "Doll", 
+                clues: [
+                    "Porcelain child that never grows",
+                    "Painted smile hiding cracks",
+                    "Silent companion of lonely hours"
+                ] 
+            },
+            { 
+                emoji: "🪀", 
+                name: "Yo-Yo", 
+                clues: [
+                    "Circular acrobat on a string",
+                    "Wooden wheel that sleeps and wakes",
+                    "Toy that orbits your hand"
+                ] 
+            },
+            { 
+                emoji: "🎣", 
+                name: "Fishing Rod", 
+                clues: [
+                    "Flexible pole with deceptive intent",
+                    "Tool for liquid hunting",
+                    "Bamboo liar with hidden hook"
+                ] 
+            },
+            { 
+                emoji: "🪁", 
+                name: "Kite", 
+                clues: [
+                    "Colorful captive of the wind",
+                    "Tethered bird that longs for clouds",
+                    "Paper dream on a string"
+                ] 
+            },
+            { 
+                emoji: "🧵", 
+                name: "Spool", 
+                clues: [
+                    "Cylindrical keeper of tangled stories",
+                    "Wooden wheel wound with potential",
+                    "Threaded spine of fabric dreams"
+                ] 
+            },
+            { 
+                emoji: "🪡", 
+                name: "Needle", 
+                clues: [
+                    "Sliver of steel with a threaded eye",
+                    "Sharpened tool for fabric surgery",
+                    "Metal worm that weaves wounds"
+                ] 
+            },
+            { 
+                emoji: "🧶", 
+                name: "Yarn", 
+                clues: [
+                    "Fuzzy snake of knitted potential",
+                    "Woolen thread of cozy creation",
+                    "Twisted fiber waiting to become"
+                ] 
+            },
+            { 
+                emoji: "🪢", 
+                name: "Knot", 
+                clues: [
+                    "Tangled marriage of two ropes",
+                    "Intentional complication in line",
+                    "Secure complication"
+                ] 
+            },
+            { 
+                emoji: "🧴", 
+                name: "Perfume", 
+                clues: [
+                    "Liquid memory in glass prison",
+                    "Bottled essence of forgotten gardens",
+                    "Alcoholic flower ghost"
+                ] 
+            },
+            { 
+                emoji: "🪒", 
+                name: "Razor", 
+                clues: [
+                    "Smiling metal that kisses close",
+                    "Sharpened tongue that shaves truth",
+                    "Dangerous edge against stubble"
+                ] 
+            },
+            { 
+                emoji: "🧷", 
+                name: "Safety Pin", 
+                clues: [
+                    "Bent metal with a sharp secret",
+                    "Temporary stitcher of fabric wounds",
+                    "Pointed embrace with a clasp"
+                ] 
+            },
+            { 
+                emoji: "🪞", 
+                name: "Compact Mirror", 
+                clues: [
+                    "Vanity's portable pool",
+                    "Small circle of reflected truth",
+                    "Pocket-sized face thief"
+                ] 
+            },
+            { 
+                emoji: "🧹", 
+                name: "Broom", 
+                clues: [
+                    "Straw-haired domestic dancer",
+                    "Twiggy sweeper of floors and dreams",
+                    "Wooden spine with fibrous skirt"
+                ] 
+            },
+            { 
+                emoji: "🪣", 
+                name: "Bucket", 
+                clues: [
+                    "Metal mouth that holds liquid",
+                    "Round-bellied water carrier",
+                    "Humble vessel of many uses"
+                ] 
+            },
+            { 
+                emoji: "🪤", 
+                name: "Mouse Trap", 
+                clues: [
+                    "Wooden jaws for small thieves",
+                    "Deadly welcome for furry intruders",
+                    "Spring-loaded betrayal"
+                ] 
+            },
+            { 
+                emoji: "🧮", 
+                name: "Abacus", 
+                clues: [
+                    "Ancient computer of sliding beads",
+                    "Wooden frame of countable truth",
+                    "Pre-digital calculation device"
+                ] 
+            },
+            { 
+                emoji: "📯", 
+                name: "Post Horn", 
+                clues: [
+                    "Brass announcer of arrivals",
+                    "Curved metal that shouts news",
+                    "Historical email notification"
+                ] 
+            },
+            { 
+                emoji: "🪕", 
+                name: "Lute", 
+                clues: [
+                    "Ancient guitar of minstrels",
+                    "Pear-shaped poet's companion",
+                    "Wooden belly with singing strings"
+                ] 
+            }
+        ];
+        gameState.targetObjects = [...gameState.targetObjects].sort(() => Math.random() - 0.5).slice(0, 5);
+
+            // Place target objects
+            placeObjects(gameState.targetObjects, 'real');
+            
+            // Place 25 decoy objects
+            const selectedDecoys = [...decoyDatabase]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 25);
+            
+            placeObjects(selectedDecoys, 'decoy');
+
+            startTimer(); // ⏰ Timer chalu karega
+
+        }
+
+        function initTwoPlayerSetup() {
+            // Clear previous selections
+            objectSelector.innerHTML = '';
+            clueSetupArea.innerHTML = '';
+            gameState.selectedObjects = [];
+            
+            // Create object selection options
+            objectDatabase.forEach((obj, index) => {
+                const option = document.createElement('div');
+                option.className = 'object-option';
+                option.innerHTML = `
+                    <div class="object-emoji">${obj.emoji}</div>
+                    <div class="object-name">${obj.name}</div>
+                `;
+                
+                option.addEventListener('click', () => {
+                    if (option.classList.contains('selected')) {
+                        option.classList.remove('selected');
+                        gameState.selectedObjects = gameState.selectedObjects.filter(o => o.name !== obj.name);
+                    } else {
+                        if (gameState.selectedObjects.length < 5) {
+                            option.classList.add('selected');
+                            gameState.selectedObjects.push({
+                                emoji: obj.emoji,
+                                name: obj.name,
+                                clues: []
+                            });
+                        }
+                    }
+                    updateClueSetup();
+                });
+                
+                objectSelector.appendChild(option);
+            });
+        }
+
+        function updateClueSetup() {
+            clueSetupArea.innerHTML = '';
+            
+            if (gameState.selectedObjects.length === 0) {
+                clueSetupArea.innerHTML = '<p>Select 5 objects to write clues for</p>';
+                startGameBtn.disabled = true;
+                return;
+            }
+            
+            gameState.selectedObjects.forEach((obj, index) => {
+                const clueContainer = document.createElement('div');
+                clueContainer.className = 'clue-container';
+                clueContainer.innerHTML = `
+                    <h4>${obj.emoji} ${obj.name}</h4>
+                    <input type="text" class="clue-input" placeholder="Write a clue for ${obj.name}" 
+                        data-object-index="${index}">
+                    <button class="btn" data-object-index="${index}" style="padding: 5px 10px; font-size: 0.8rem;">Add Clue</button>
+                    <div class="clue-list" id="clues-${index}"></div>
+                `;
+                
+                const addClueBtn = clueContainer.querySelector('button');
+                const clueInput = clueContainer.querySelector('.clue-input');
+                const clueList = clueContainer.querySelector('.clue-list');
+                
+                // Show existing clues
+                obj.clues.forEach(clue => {
+                    const clueItem = document.createElement('div');
+                    clueItem.className = 'clue-item';
+                    clueItem.textContent = clue;
+                    clueList.appendChild(clueItem);
+                });
+                
+                addClueBtn.addEventListener('click', () => {
+    const clueText = clueInput.value.trim();
+    if (clueText) {
+        gameState.selectedObjects[index].clues.push(clueText);
+        clueInput.value = '';
+        
+        const clueItem = document.createElement('div');
+        clueItem.className = 'clue-item';
+        clueItem.textContent = clueText;
+        clueList.appendChild(clueItem);
+
+        updateClueSetup(); // ✅ Play button enable karega
+    }
+});
+
+
+                
+                clueSetupArea.appendChild(clueContainer);
+            });
+            
+            startGameBtn.disabled = gameState.selectedObjects.length !== 5 || 
+                gameState.selectedObjects.some(obj => obj.clues.length === 0);
+        }
+
+        function startTwoPlayerGame() {
+            // Hide setup panel
+            twoPlayerSetup.classList.remove('active');
+            
+            // Set target objects from player's selection
+            gameState.targetObjects = [...gameState.selectedObjects];
+            
+            // Place target objects
+            placeObjects(gameState.targetObjects, 'real');
+            
+            // Place 25 decoy objects
+            const selectedDecoys = [...decoyDatabase]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 25);
+            
+            placeObjects(selectedDecoys, 'decoy');
+            
+            totalElement.textContent = gameState.targetObjects.length;
+            foundElement.textContent = '0';
+            timeElement.textContent = gameState.timeLeft;
+            
+            // Set initial clue
+            updateClue();
+            
+            // Start timer
+            startTimer();
+        }
+
+        // Place objects in game area
+        function placeObjects(objects, type) {
+            const gameWidth = gameArea.offsetWidth - 50;
+            const gameHeight = gameArea.offsetHeight - 50;
+            
+            objects.forEach((obj, index) => {
+                const element = document.createElement('div');
+                element.className = `object ${type}`;
+                
+                if (type === 'real') {
+                    element.dataset.name = obj.name;
+                    element.innerHTML = `
+                        <div class="object-emoji">${obj.emoji}</div>
+                        <div class="object-name">${obj.name}</div>
+                    `;
+                    
+                    // Store reference with element
+                    if (gameState.gameMode === 'single') {
+                        gameState.targetObjects[index].element = element;
+                    } else {
+                        gameState.targetObjects[index] = {
+                            ...gameState.targetObjects[index],
+                            element: element
+                        };
+                    }
+                } else {
+                    element.innerHTML = `
+                        <div class="object-emoji">${obj}</div>
+                        <div class="object-name">Decoy</div>
+                    `;
+                    gameState.decoys.push(element);
+                }
+                
+                // Random position with margin
+                const left = Math.floor(Math.random() * gameWidth);
+                const top = Math.floor(Math.random() * gameHeight);
+                
+                element.style.left = `${left}px`;
+                element.style.top = `${top}px`;
+                
+                // Click handler
+                element.addEventListener('click', () => handleObjectClick(element, type, index));
+                
+                gameArea.appendChild(element);
+            });
+        }
+
+        function updateClue() {
+    if (gameState.foundCount < gameState.targetObjects.length) {
+        const currentObject = gameState.targetObjects[gameState.foundCount];
+        if (currentObject.clues && currentObject.clues.length > 0) {
+            // Show a random clue each time (or use current index if you want cycling)
+            const clue = currentObject.clues[Math.floor(Math.random() * currentObject.clues.length)];
+            clueElement.textContent = clue;
+        } else {
+            clueElement.textContent = "Solve the next clue!";
+        }
+    } else {
+        clueElement.textContent = "🎉 All objects found!";
+    }
+}
+
+
+        // Handle object click
+        function handleObjectClick(element, type, index) {
+            if (type === 'real') {
+                // Correct object found
+                element.classList.add('found');
+                gameState.foundCount++;
+                foundElement.textContent = gameState.foundCount;
+                
+                // Update clue for next object
+                if (gameState.foundCount < gameState.targetObjects.length) {
+                    updateClue();
+                }
+                
+                // Check if all found
+                if (gameState.foundCount === gameState.targetObjects.length) {
+                    endGame(true);
+                }
+            } else {
+                // Wrong object clicked - time penalty
+                gameState.timeLeft = Math.max(3, gameState.timeLeft - 3);
+                timeElement.textContent = gameState.timeLeft;
+                element.style.animation = 'pulse 0.3s';
+                setTimeout(() => {
+                    element.style.animation = '';
+                }, 300);
+                
+                // Cycle to next clue if available
+                if (gameState.foundCount < gameState.targetObjects.length) {
+                    const currentObject = gameState.targetObjects[gameState.foundCount];
+                    if (currentObject.clues && currentObject.clues.length > 1) {
+                        gameState.currentClueIndex = (gameState.currentClueIndex + 1) % currentObject.clues.length;
+                        clueElement.textContent = currentObject.clues[gameState.currentClueIndex];
+                    }
+                }
+            }
+        }
+
+        // Start game timer
+        function startTimer() {
+            clearInterval(gameState.timer);
+            
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                timeElement.textContent = gameState.timeLeft;
+                
+                if (gameState.timeLeft <= 10) {
+                    timeElement.style.color = 'var(--danger)';
+                    timeElement.style.animation = 'pulse 0.5s infinite';
+                }
+                
+                if (gameState.timeLeft <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+
+        // End game
+        function endGame(success) {
+    clearInterval(gameState.timer);
+    
+    const endScreen = document.getElementById('endScreen');
+    const endMessage = document.getElementById('endMessage');
+
+    if (success) {
+        endMessage.textContent = `🎉 You found all objects!`;
+    } else {
+        endMessage.textContent = `⏰ Time's up! You found ${gameState.foundCount} of ${gameState.targetObjects.length} objects.`;
+    }
+
+    endScreen.style.display = 'block';
+}
+
+
+        // Event listeners
+   singlePlayerBtn.addEventListener('click', () => {
+    gameState.gameMode = 'single';
+    document.getElementById('modeScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
+    initGame();
+});
+
+twoPlayerBtn.addEventListener('click', () => {
+    gameState.gameMode = 'two';
+    document.getElementById('modeScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
+    twoPlayerSetup.classList.add('active');
+    initGame();
+});
+
+        startGameBtn.addEventListener('click', startTwoPlayerGame);
+        restartBtn.addEventListener('click', initGame);
+        document.getElementById('playAgainSingle').addEventListener('click', () => {
+    gameState.gameMode = 'single';
+    document.getElementById('endScreen').style.display = 'none';
+    initGame();
+});
+
+document.getElementById('playAgainTwo').addEventListener('click', () => {
+    gameState.gameMode = 'two';
+    document.getElementById('endScreen').style.display = 'none';
+    twoPlayerSetup.classList.add('active');
+    initGame();
+});
+
+    </script>
+</body>
+</html>
